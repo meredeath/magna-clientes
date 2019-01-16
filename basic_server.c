@@ -19,18 +19,33 @@ int main() {
   signal(SIGINT, sighandler);
   
   while(1){
-    from_client = server_handshake( &to_client );
-    char *input = calloc(100, 1);
+    printf("server waiting for clients to connect\n");
 
-    while(read(from_client, input, 100)){
-      printf("Input from client: %s\n", input);
+    //making pipe that receives client connections
+    char *mainpipe = "mainpipe";
+    mkfifo(mainpipe, 0666);
+    from_client = open(mainpipe, O_RDONLY);
+
+    if(fork()){
+      
+      close(from_client);
+      remove(mainpipe);
+
+    }else{
+    
+      to_client = server_handshake( &from_client );
+      char *input = calloc(100, 1);
+
+      while(read(from_client, input, 100)){
+	printf("subserver: %d\n", getpid());
 
       //changing client output and sending to server
       for(int i=0; i<strlen(input); i++){
 	input[i] = input[i] + 'A' - 'a';
       }
       write(to_client, input, 100);
+      }
     }
   }
-  
+  return 0;
 }
